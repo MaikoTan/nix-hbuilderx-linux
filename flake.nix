@@ -29,7 +29,7 @@
         };
 
         meta = with pkgs.lib; {
-          mainProgram = "hbuilderx";
+          mainProgram = "hbuilderx-cli";
           description = "A (self-claimed) superpowered IDE for Vue from DCloud.io";
           license = [
             licenses.unfree # The software is not open source
@@ -41,6 +41,7 @@
         runtimeLibs = with pkgs; [
           glib
           libGL
+          libpng
           harfbuzz
           freetype
           xorg.libXrender
@@ -71,13 +72,23 @@
           installPhase = ''
             runHook preInstall
 
-            mkdir -p $out/{bin,share}
-            cp -r $src $out/share/hbuilderx
-            ln -s $out/share/hbuilderx/cli $out/bin/hbuilderx
+            mkdir -p $out/bin
 
-            wrapProgram $out/bin/hbuilderx \
-              --prefix PATH : ${pkgs.lib.makeBinPath runtimeBins} \
-              --prefix LD_LIBRARY_PATH : ${pkgs.lib.makeLibraryPath runtimeLibs}
+            cat > $out/bin/hbuilderx <<EOF
+            #!${pkgs.runtimeShell}
+            export PATH=${pkgs.lib.makeBinPath runtimeBins}:\$PATH
+            export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath runtimeLibs}:\$LD_LIBRARY_PATH
+            exec ${src}/HBuilderX "\$@"
+            EOF
+            chmod +x $out/bin/hbuilderx
+
+            cat > $out/bin/hbuilderx-cli <<EOF
+            #!${pkgs.runtimeShell}
+            export PATH=${pkgs.lib.makeBinPath runtimeBins}:\$PATH
+            export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath runtimeLibs}:\$LD_LIBRARY_PATH
+            exec ${src}/cli "\$@"
+            EOF
+            chmod +x $out/bin/hbuilderx-cli
 
             runHook postInstall
           '';
